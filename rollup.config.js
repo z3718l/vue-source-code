@@ -1,6 +1,5 @@
 import babel from 'rollup-plugin-babel';
 import serve from 'rollup-plugin-serve';
-
 export default {
 	input: './src/index.js', // 以哪个文件作为打包入口
 	output: {

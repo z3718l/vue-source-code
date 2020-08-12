@@ -8,9 +8,14 @@
 </head>
 <body>
     <script>
-        // console.log(vue)
-        let vm = new vue({
-            el: '#app'
+        let vm = new Vue({
+            el: '#app',
+            data() {
+                return {
+                    name: 'zhangsan',
+                    age: 12
+                }
+            }
         })
     </script>
 </body>
