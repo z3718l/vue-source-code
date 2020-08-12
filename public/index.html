@@ -13,10 +13,17 @@
             data() {
                 return {
                     name: 'zhangsan',
-                    age: 12
+                    age: 12,
+                    address: {
+                        he: 55,
+                        hh: 'ki'
+                    }
                 }
             }
         })
+        // console.log(vm._data.name = 'lisi')
+        let da = vm._data
+        console.log(da) // 此时address没有被监测到，没有get set方法，所以需要递归调用
     </script>
 </body>
 </html>
