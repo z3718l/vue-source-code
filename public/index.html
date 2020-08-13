@@ -12,18 +12,21 @@
             el: '#app',
             data() {
                 return {
-                    name: 'zhangsan',
-                    age: 12,
-                    address: {
-                        he: 55,
-                        hh: 'ki'
-                    }
+                    // name: 'zhangsan',
+                    // age: 12,
+                    // address: {
+                    //     he: 55,
+                    //     hh: 'ki'
+                    // }
+                    arr: [{name: 'zhangsan', age: 12},{name: 'lisi', age: 18}]
                 }
             }
         })
         // console.log(vm._data.name = 'lisi')
-        let da = vm._data
-        console.log(da) // 此时address没有被监测到，没有get set方法，所以需要递归调用
+        // let da = vm._data
+        // console.log(da) // 此时address没有被监测到，没有get set方法，所以需要递归调用
+        vm._data.arr.push({aa: 12})
+        console.log(vm._data.arr)
     </script>
 </body>
 </html>
