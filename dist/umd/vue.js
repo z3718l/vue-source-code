@@ -218,8 +218,6 @@
     observe(data); // 响应式原理
   }
 
-  // ast语法树 是用对象来描述原生语法的 
-  // 虚拟Dom 用过对象来面试dom节点
   // ?: 匹配不捕获
   // arguments[0] = 匹配到的标签   arguments[1] = 匹配到的标签名字
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*"; // 匹配 abc-aaa (标签)
@@ -233,21 +231,77 @@
   var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // 匹配属性的 <div id=""></div>
 
   var startTagClose = /^\s*(\/?)>/; // 匹配标签结束的 >
-
-  function start(tagName, attrs) {
-    console.log('开始标签');
-  }
-
-  function chars(text) {
-    console.log(text);
-  }
-
-  function end(tagName) {
-    console.log(tagName);
-  }
-
   function parseHTML(html) {
-    // 不停的去解析html字符串
+    // 创建ast节点
+    function createASTElement(tagName, attrs) {
+      return {
+        tag: tagName,
+        // 标签名
+        type: 1,
+        // 元素类型
+        children: [],
+        // 孩子列表
+        attrs: attrs,
+        // 属性集合
+        parent: null // 父级
+
+      };
+    } // 处理开始标签
+
+
+    var root;
+    var currentParent;
+    var stack = [];
+    /**
+     * 验证标签是否合法
+     * 思路：使用栈 每截取一个标签，放入栈中，如果结束了，拿出栈中最后一个进行比较，
+     * 如果相同，则表示标签合法，否则不合法，也就是出现这样的标签嵌套<div><p><span></p></div>
+     * [div, p, span]
+     */
+
+    function start(tagName, attrs) {
+      // console.log(tagName, attrs, '======开始标签======')
+      var element = createASTElement(tagName, attrs);
+
+      if (!root) {
+        root = element;
+      }
+
+      currentParent = element; // 当前解析的标签 保存起来
+      // 拿到的是开始的标签
+
+      stack.push(element); // 将生产的ast元素放入栈中，因为标签名是没有parent属性的
+    }
+
+    function chars(text) {
+      // console.log(text, '======文本标签======')
+      text = text.replace(/\s/g, ''); // 正则匹配 将空格全部去掉
+
+      if (text) {
+        // 如果去掉空格，text不为空
+        currentParent.children.push({
+          type: 3,
+          text: text
+        });
+      }
+    }
+
+    function end(tagName) {
+      // 在结尾标签处 创建父子关系
+      // console.log(tagName, '======结束标签======')
+      // 结束的时候，将栈中最后一个拿出来，进行比较
+      var element = stack.pop(); // 取出栈中最后一个
+
+      currentParent = stack[stack.length - 1];
+
+      if (currentParent) {
+        // 在闭合时可以知道这个标签的父亲是谁
+        element.parent = currentParent;
+        currentParent.children.push(element);
+      }
+    } // 不停的去解析html字符串
+
+
     while (html) {
       var textEnd = html.indexOf('<');
 
@@ -273,6 +327,7 @@
       var text = void 0;
 
       if (textEnd >= 0) {
+        // 是文本
         text = html.substring(0, textEnd);
       }
 
@@ -319,11 +374,23 @@
         }
       }
     }
+
+    return root;
   }
 
+  // ast语法树 是用对象来描述原生语法的 
   function compileToFunction(template) {
-    var root = parseHTML(template); // 将html结构解析成语法树
+    // 将html模板 =》render函数
 
+    /**
+     * 1、需要将会html代码转化成'AST'语法树 可以用ast树来描述语言本身
+     * 
+     * 2、通过这个树结构 重新生成代码
+     */
+    var root = parseHTML(template); // 将html结构解析成语法树
+    // vue中的优化静态节点
+
+    console.log(root);
     return function render() {};
   } // 模板解析就是使用正则对字符串进行匹配和截取
 
