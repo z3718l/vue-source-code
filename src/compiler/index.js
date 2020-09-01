@@ -14,17 +14,26 @@ export function compileToFunction(template) {
    * 2、静态优化（不是重点 可自行查看）
    * 
    * 3、通过这个树结构 重新生成代码
+   * 
+   * 4、将字符串变成函数
    */
   // 1）
   let root = parseHTML(template); // 将html结构解析成语法树
+
   // 2）vue中的优化静态节点
   // console.log(root)
-  let code = generate(root)
+
+  // 3）
+  let code = generate(root);
   console.log(code)
-  return function render() {
-    // 3）
+
+  // 4）限制取值范围 通过with来进行取值 稍后调用render函数 就可以通过改变this 让这个函数内部取到结果了
+  let render = new Function(`with(this){return ${code}}`);
+  console.log(render)
+  // return render; // 返回生成好的render方法
+  // return function render() {
     
-  }
+  // }
 }
 
 

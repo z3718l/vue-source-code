@@ -446,7 +446,8 @@
    *  return _c('div', { id: 'app', style: { color: 'red' }}, _v('Hello' + _s(name)), _c('span', null, _v('Hello')))
    * }
    */
-  // 语法层面的转义
+  var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; // 语法层面的转义
+
   function genProps(attrs) {
     // 处理属性  
     // console.log(attrs)
@@ -487,7 +488,32 @@
       var text = node.text; // 获取文本
       // 如果是普通文本 不带{{}}
 
-      return "_v(".concat(JSON.stringify(text), ")");
+      if (!defaultTagRE.test(text)) {
+        return "_v(".concat(JSON.stringify(text), ")");
+      }
+
+      var tokens = []; // 存放每一段的代码
+
+      var lastIndex = defaultTagRE.lastIndex = 0; // 如果正则是全局模式 需要每次使用前置为0
+
+      var match, index; // 每次匹配到的结果
+
+      while (match = defaultTagRE.exec(text)) {
+        index = match.index; // 保存匹配到的索引
+
+        if (index > lastIndex) {
+          tokens.push(JSON.stringify(text));
+        }
+
+        tokens.push("_s(".concat(match[1].trim(), ")"));
+        lastIndex = index + match[0].length;
+      }
+
+      if (lastIndex < text.length) {
+        tokens.push(JSON.stringify(text.slice(lastIndex)));
+      }
+
+      return "_v(".concat(tokens.join('+'), ")");
     }
   }
 
@@ -521,16 +547,22 @@
      * 2、静态优化（不是重点 可自行查看）
      * 
      * 3、通过这个树结构 重新生成代码
+     * 
+     * 4、将字符串变成函数
      */
     // 1）
     var root = parseHTML(template); // 将html结构解析成语法树
     // 2）vue中的优化静态节点
     // console.log(root)
+    // 3）
 
     var code = generate(root);
-    console.log(code);
-    return function render() {// 3）
-    };
+    console.log(code); // 4）限制取值范围 通过with来进行取值 稍后调用render函数 就可以通过改变this 让这个函数内部取到结果了
+
+    var render = new Function("with(this){return ".concat(code, "}"));
+    console.log(render); // return render; // 返回生成好的render方法
+    // return function render() {
+    // }
   } // 生成的render函数
 
   /**

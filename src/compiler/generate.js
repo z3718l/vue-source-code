@@ -10,6 +10,7 @@
  *  return _c('div', { id: 'app', style: { color: 'red' }}, _v('Hello' + _s(name)), _c('span', null, _v('Hello')))
  * }
  */
+const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g
 // 语法层面的转义
 function genProps(attrs) { // 处理属性  
   // console.log(attrs)
@@ -34,7 +35,24 @@ function gen(node) { // 判断node的nodetype
   } else { // 如果是文本
     let text = node.text; // 获取文本
     // 如果是普通文本 不带{{}}
-    return `_v(${JSON.stringify(text)})`
+    if (!defaultTagRE.test(text)) {
+      return `_v(${JSON.stringify(text)})`
+    }
+    let tokens = []; // 存放每一段的代码
+    let lastIndex = defaultTagRE.lastIndex = 0; // 如果正则是全局模式 需要每次使用前置为0
+    let match,index; // 每次匹配到的结果
+    while(match = defaultTagRE.exec(text)) {
+      index = match.index; // 保存匹配到的索引
+      if (index > lastIndex) {
+        tokens.push(JSON.stringify(text))
+      }
+      tokens.push(`_s(${match[1].trim()})`);
+      lastIndex = index+match[0].length;
+    }
+    if (lastIndex < text.length) {
+      tokens.push(JSON.stringify(text.slice(lastIndex)))
+    }
+    return `_v(${tokens.join('+')})`
   }
 }
 function  genChildren(el) { // 处理孩子元素
