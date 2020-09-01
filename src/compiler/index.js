@@ -30,7 +30,7 @@ export function compileToFunction(template) {
   // 4）限制取值范围 通过with来进行取值 稍后调用render函数 就可以通过改变this 让这个函数内部取到结果了
   let render = new Function(`with(this){return ${code}}`);
   console.log(render)
-  // return render; // 返回生成好的render方法
+  return render; // 返回生成好的render方法
   // return function render() {
     
   // }

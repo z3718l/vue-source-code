@@ -1,6 +1,7 @@
 // 在原型上添加init方法
 import { initState} from './state.js'
 import { compileToFunction } from './compiler/index.js'
+import {mountComponent} from './lifecycle.js'
 export function initMixin(Vue) {
 	// vue初始化流程
   Vue.prototype._init = function(options) {
@@ -32,5 +33,8 @@ export function initMixin(Vue) {
 			options.render = render; // 方便后续使用render方法
 			// 需要将template转化成render方法 也就是将标签解析成ast语法树 
 		}
+
+		// 需要挂载这个组件
+		mountComponent(vm, el);
 	}
 }

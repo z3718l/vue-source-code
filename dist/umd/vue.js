@@ -560,7 +560,8 @@
     console.log(code); // 4）限制取值范围 通过with来进行取值 稍后调用render函数 就可以通过改变this 让这个函数内部取到结果了
 
     var render = new Function("with(this){return ".concat(code, "}"));
-    console.log(render); // return render; // 返回生成好的render方法
+    console.log(render);
+    return render; // 返回生成好的render方法
     // return function render() {
     // }
   } // 生成的render函数
@@ -604,6 +605,16 @@
    * }
    */
 
+  function lifecycleMixin(Vue) {
+    Vue.prototype._update = function () {// 传入虚拟节点，将虚拟节点渲染成真实节点并展示到页面上
+    };
+  }
+  function mountComponent(vm, el) {
+    // 调用render函数去渲染 el属性
+    // 先调用render方法 创建虚拟节点 再将虚拟节点渲染到页面上
+    vm._update(vm._render());
+  }
+
   // 在原型上添加init方法
   function initMixin(Vue) {
     // vue初始化流程
@@ -637,7 +648,59 @@
         var render = compileToFunction(template);
         options.render = render; // 方便后续使用render方法
         // 需要将template转化成render方法 也就是将标签解析成ast语法树 
-      }
+      } // 需要挂载这个组件
+
+
+      mountComponent(vm);
+    };
+  }
+
+  function renderMixin(Vue) {
+    Vue.prototype._c = function () {
+      // 创建元素
+      return createElement.apply(void 0, arguments);
+    };
+
+    Vue.prototype._s = function (val) {
+      // stringify
+      return val == null ? '' : _typeof(val) == 'object' ? JSON.stringify(val) : val;
+    };
+
+    Vue.prototype._v = function (text) {
+      // 创建文本元素
+      return createTextVnode(text);
+    };
+
+    Vue.prototype._render = function () {
+      var vm = this;
+      var render = vm.$options.render;
+      var vnode = render.call(vm);
+      return vnode;
+    };
+  }
+
+  function createElement(tag) {
+    var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+    for (var _len = arguments.length, children = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+      children[_key - 2] = arguments[_key];
+    }
+
+    return vnode.apply(void 0, [tag, data].concat(children));
+  }
+
+  function createTextVnode(text) {
+    return vnode(undefined, undefined, undefined, undefined, text);
+  } // 用来生成虚拟dom
+
+
+  function vnode(tag, data, key, children, text) {
+    return {
+      tag: tag,
+      data: data,
+      key: key,
+      children: children,
+      text: text
     };
   }
 
@@ -652,6 +715,8 @@
 
 
   initMixin(Vue);
+  lifecycleMixin(Vue);
+  renderMixin(Vue);
 
   return Vue;
 
