@@ -42,6 +42,62 @@
     return Constructor;
   }
 
+  function _slicedToArray(arr, i) {
+    return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
+  }
+
+  function _arrayWithHoles(arr) {
+    if (Array.isArray(arr)) return arr;
+  }
+
+  function _iterableToArrayLimit(arr, i) {
+    if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return;
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+    var _e = undefined;
+
+    try {
+      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"] != null) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+
+  function _unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+  }
+
+  function _arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+
+    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+
+    return arr2;
+  }
+
+  function _nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+
   // 判断当前数据是不是对象
   function isObject(data) {
     return _typeof(data) === 'object' && data !== null;
@@ -378,6 +434,83 @@
     return root;
   }
 
+  /**
+   * 预期：<div id="app" style="color: red"> hello {{ name}} <span>hello</span> </div>
+   * 
+   * ==>
+   * _c：创建元素（等价react中的createElement）
+   * _v：创建文本节点
+   * _s：JSON.stringfy的字符串
+   * 通过generate函数，将传入的模板变成render函数
+   * 结果：render() {
+   *  return _c('div', { id: 'app', style: { color: 'red' }}, _v('Hello' + _s(name)), _c('span', null, _v('Hello')))
+   * }
+   */
+  // 语法层面的转义
+  function genProps(attrs) {
+    // 处理属性  
+    // console.log(attrs)
+    var str = '';
+
+    for (var i = 0; i < attrs.length; i++) {
+      var attr = attrs[i];
+
+      if (attr.name === 'style') {
+        (function () {
+          // 对样式进行特殊处理
+          var obj = {};
+          attr.value.split(';').forEach(function (item) {
+            var _item$split = item.split(':'),
+                _item$split2 = _slicedToArray(_item$split, 2),
+                key = _item$split2[0],
+                value = _item$split2[1];
+
+            obj[key] = value;
+          });
+          attr.value = obj;
+        })();
+      }
+
+      str += "".concat(attr.name, ":").concat(JSON.stringify(attr.value));
+    }
+
+    return "{".concat(str.slice(0, -1), "}"); // 处理掉最后一个,
+  }
+
+  function gen(node) {
+    // 判断node的nodetype
+    if (node.type === 1) {
+      // 元素类型
+      return generate(node); // 生成元素节点的字符串
+    } else {
+      // 如果是文本
+      var text = node.text; // 获取文本
+      // 如果是普通文本 不带{{}}
+
+      return "_v(".concat(JSON.stringify(text), ")");
+    }
+  }
+
+  function genChildren(el) {
+    // 处理孩子元素
+    var children = el.children;
+
+    if (children) {
+      // 如果有孩子元素
+      return children.map(function (child) {
+        return gen(child);
+      }).join(',');
+    }
+  }
+
+  function generate(el) {
+    // console.log(el)
+    var children = genChildren(el); // 获取孩子元素
+
+    var code = "_c('".concat(el.tag, "', ").concat(el.attrs.length ? "".concat(genProps(el.attrs)) : 'undefined').concat(children ? ",".concat(children) : '', ")");
+    return code;
+  }
+
   // ast语法树 是用对象来描述原生语法的 
   function compileToFunction(template) {
     // 将html模板 =》render函数
@@ -385,14 +518,34 @@
     /**
      * 1、需要将会html代码转化成'AST'语法树 可以用ast树来描述语言本身
      * 
-     * 2、通过这个树结构 重新生成代码
+     * 2、静态优化（不是重点 可自行查看）
+     * 
+     * 3、通过这个树结构 重新生成代码
      */
+    // 1）
     var root = parseHTML(template); // 将html结构解析成语法树
-    // vue中的优化静态节点
+    // 2）vue中的优化静态节点
+    // console.log(root)
 
-    console.log(root);
-    return function render() {};
-  } // 模板解析就是使用正则对字符串进行匹配和截取
+    var code = generate(root);
+    console.log(code);
+    return function render() {// 3）
+    };
+  } // 生成的render函数
+
+  /**
+   * <div id="app" style="color: red"> hello {{ name}} <span>hello</span> </div>
+   * 
+   * ==>
+   * _c：创建元素（等价react中的createElement）
+   * _v：创建文本节点
+   * _s：JSON.stringfy的字符串
+   * 通过generate函数，将传入的ast变成render函数
+   * render() {
+   *  return _c('div', { id: 'app', style: { color: 'red' }}, _v('Hello' + _s(name)), _c('span', null, _v('Hello')))
+   * }
+   */
+  // 模板解析就是使用正则对字符串进行匹配和截取
 
   /**
    * <div id="app">
